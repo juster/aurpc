@@ -55,7 +55,7 @@ def author_url ( author )
   BASEURL + "/author/#{author}"
 end
 
-def prep_pkg_matches ( pkgs )
+def pkg_matches ( pkgs )
   pkgs.each do |pkg|
     pkg[:author_url] = author_url ( pkg[:author] )
     pkg[:url]        = package_url( pkg[:name]   )
@@ -70,7 +70,7 @@ def find_pkg_glob ( glob )
   pkgs  = $AURDB.glob_pkg( glob, after )
   halt 400, "No matches found" unless pkgs.length > 0
 
-  return JSON.generate prep_pkg_matches( pkgs )
+  return JSON.generate pkg_matches( pkgs )
 end
 
 get '/' do
@@ -103,5 +103,13 @@ end
 get '/packages' do
   after = params[:after] || ""
   pkgs  = $AURDB.iter_pkgs( after )
-  JSON.generate prep_pkg_matches( pkgs )
+  JSON.generate pkg_matches( pkgs )
+end
+
+get '/authors/:name' do |name|
+  authorinfo = $AURDB.lookup_author( name )
+  halt 400, "#{name} was not found" unless authorinfo
+
+  authorinfo[:packages].each { |pkg| pkg[:url] = package_url( pkg[:name] ) }
+  JSON.generate authorinfo
 end

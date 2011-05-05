@@ -56,6 +56,23 @@ LIMIT 500
 
 ENDSQL
 
+SQL_AUTHORINFO = <<'ENDSQL'
+
+SELECT a.author_id, a.txt
+FROM   author AS a
+WHERE  a.txt = ?
+
+ENDSQL
+
+SQL_AUTHORPKGS = <<'ENDSQL'
+
+SELECT n.txt, p.version, p.description
+FROM   pkg      AS p
+JOIN   pkg_name AS n ON (p.name_id   = n.name_id)
+WHERE  p.author_id = ?
+
+ENDSQL
+
 class AURLite
   def initialize ( dbpath )
     @db = SQLite3::Database.new( dbpath )
@@ -64,6 +81,9 @@ class AURLite
     @pkgdeps     = @db.prepare( SQL_PKGDEPS )
     @pkgmakedeps = @db.prepare( SQL_PKGMAKEDEPS )
     @pkgiter     = @db.prepare( SQL_PKGITER )
+
+    @authorinfo  = @db.prepare( SQL_AUTHORINFO )
+    @authorpkgs  = @db.prepare( SQL_AUTHORPKGS )
 
     @globpkg = @db.prepare( SQL_GLOBPKG )
   end
@@ -100,5 +120,17 @@ class AURLite
 
   def iter_pkgs ( after )
     @pkgiter.execute( after ).collect { |row| _matchrow_hash( row ) }
+  end
+
+  def lookup_author ( author )
+    arow = @authorinfo.execute( author ).next
+    return nil if arow.nil?
+
+    authorid = arow[0]
+    apkgs = @authorpkgs.execute( authorid ).collect do |pkgrow|
+      { :name => pkgrow[0], :version => pkgrow[1], :desc => pkgrow[2] }
+    end
+
+    return { :name => arow[1], :packages => apkgs }
   end
 end
