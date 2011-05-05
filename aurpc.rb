@@ -14,6 +14,7 @@ DB_PATH    = APPDIR + '/../var/aurlite.db'
 MIN_SECS  = 60
 HOUR_SECS = MIN_SECS  * 60
 DAY_SECS  = HOUR_SECS * 24
+RESULTS_LIMIT = 500
 
 set :public, STATICDIR
 
