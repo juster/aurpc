@@ -77,7 +77,7 @@ end
 def find_pkg_glob ( glob )
   after = params[:after] || ""
   pkgs  = $AURDB.glob_pkg( glob, after )
-  halt 400, "No matches found" unless pkgs.length > 0
+  halt 404, "No matches found" unless pkgs.length > 0
 
   return JSON.generate pkg_matches( pkgs )
 end
@@ -103,7 +103,7 @@ get '/packages/:name' do |name|
   return find_pkg_glob( name ) if name =~ /[*]/
 
   pkginfo = $AURDB.lookup_pkg( name )
-  halt 400, "#{name} was not found" unless pkginfo
+  halt 404, "#{name} was not found" unless pkginfo
 
   pkginfo[:author_url] = author_url( pkginfo[:author] )
   JSON.generate pkginfo
@@ -117,7 +117,7 @@ end
 
 get '/authors/:name' do |name|
   authorinfo = $AURDB.lookup_author( name )
-  halt 400, "#{name} was not found" unless authorinfo
+  halt 404, "#{name} was not found" unless authorinfo
 
   authorinfo[:packages].each { |pkg| pkg[:url] = package_url( pkg[:name] ) }
   JSON.generate authorinfo
