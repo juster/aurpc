@@ -61,8 +61,14 @@ def pkg_matches ( pkgs )
     pkg[:url]        = package_url( pkg[:name]   )
   end
 
-  nexturl = next_url( request.path, pkgs[-1][:name] )
-  return { :matches  => pkgs, :next_url => nexturl }
+  matchdata = { :matches => pkgs }
+  matchdata[:next_url] =
+    if pkgs.length == RESULTS_LIMIT then
+      next_url( request.path, pkgs[-1][:name] )
+    else
+      nil
+    end
+  return matchdata
 end
 
 def author_matches ( anames )
@@ -70,8 +76,11 @@ def author_matches ( anames )
     { :name => aname, :url => author_url( aname ) }
   end
 
-  nexturl = next_url( request.path, anames[-1] )
-  return { :matches => amatches, :next_url => nexturl }
+  matchdata = { :matches => amatches }
+  matchdata[:next_url] = if amatches.length == RESULTS_LIMIT then
+                           next_url( request.path, anames[-1] )
+                         else nil end
+  return matchdata
 end
 
 def find_pkg_glob ( glob )
