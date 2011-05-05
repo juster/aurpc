@@ -73,6 +73,16 @@ WHERE  p.author_id = ?
 
 ENDSQL
 
+SQL_AUTHORITER = <<'ENDSQL'
+
+SELECT a.txt
+FROM   author AS a
+WHERE  a.txt > ?
+
+LIMIT 500
+
+ENDSQL
+
 class AURLite
   def initialize ( dbpath )
     @db = SQLite3::Database.new( dbpath )
@@ -84,6 +94,7 @@ class AURLite
 
     @authorinfo  = @db.prepare( SQL_AUTHORINFO )
     @authorpkgs  = @db.prepare( SQL_AUTHORPKGS )
+    @authoriter  = @db.prepare( SQL_AUTHORITER )
 
     @globpkg = @db.prepare( SQL_GLOBPKG )
   end
@@ -132,5 +143,9 @@ class AURLite
     end
 
     return { :name => arow[1], :packages => apkgs }
+  end
+
+  def authors_iter ( after )
+    @authoriter.execute( after ).collect { |arow| arow[0] }
   end
 end

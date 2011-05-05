@@ -52,7 +52,7 @@ def package_url ( pkgname )
 end
 
 def author_url ( author )
-  BASEURL + "/author/#{author}"
+  BASEURL + "/authors/#{author}"
 end
 
 def pkg_matches ( pkgs )
@@ -63,6 +63,15 @@ def pkg_matches ( pkgs )
 
   nexturl = next_url( request.path, pkgs[-1][:name] )
   return { :matches  => pkgs, :next_url => nexturl }
+end
+
+def author_matches ( anames )
+  amatches = anames.collect do |aname|
+    { :name => aname, :url => author_url( aname ) }
+  end
+
+  nexturl = next_url( request.path, anames[-1] )
+  return { :matches => amatches, :next_url => nexturl }
 end
 
 def find_pkg_glob ( glob )
@@ -112,4 +121,10 @@ get '/authors/:name' do |name|
 
   authorinfo[:packages].each { |pkg| pkg[:url] = package_url( pkg[:name] ) }
   JSON.generate authorinfo
+end
+
+get '/authors' do
+  authors = $AURDB.authors_iter( params[:after] || %Q{} )
+  halt 404, 'No matches found' if authors.empty?
+  JSON.generate author_matches( authors )
 end
