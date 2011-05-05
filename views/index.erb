@@ -5,10 +5,10 @@
  <head>
   <title>AURLite and AURPC</title>
 
-  <link rel="stylesheet" href="/css/blueprint/screen.css" type="text/css" media="screen, projection">
-  <link rel="stylesheet" href="/css/blueprint/print.css" type="text/css" media="print">  
-  <!--[if lt IE 8]><link rel="stylesheet" href="/aurlite/css/blueprint/ie.css" type="text/css" media="screen, projection"><![endif]-->
-  <link rel="stylesheet" href="/css/aurpc.css" type="text/css" />
+  <link rel="stylesheet" href="/aurpc/css/blueprint/screen.css" type="text/css" media="screen, projection">
+  <link rel="stylesheet" href="/aurpc/css/blueprint/print.css" type="text/css" media="print">  
+  <!--[if lt IE 8]><link rel="stylesheet" href="/aurpc/css/blueprint/ie.css" type="text/css" media="screen, projection"><![endif]-->
+  <link rel="stylesheet" href="/aurpc/css/aurpc.css" type="text/css" />
  </head>
  <body>
 
@@ -35,7 +35,12 @@
  </p>
  <p>
   Split PKGBUILDs are not recognized as providing multiple binary
-  packages. Comments and votes are not copied from the AUR
+  packages. Right now this is because PKGBUILDs must be executed to
+  set pkgname to an array, in order to avoid lack of support on the
+  AUR. Maybe one day I'll finish my bash parser...
+ </p>
+ <p>
+  Comments and votes are not copied from the AUR
   because I feel guilty about using up the AUR's bandwidth. I am more
   interested in generating statistics, package dependencies and
   testing out a neat RPC.
@@ -43,7 +48,7 @@
 
  <div class="prepend-1 span-1">xz</div>
  <div class="span-2">
-  <a href="/aurlite/aurlite.db.xz">aurlite.db.xz</a>
+  <a href="/aurpc/aurlite.db.xz">aurlite.db.xz</a>
  </div>
  <div class="span-2">[<%= download_sizes['xz'] %> MB]</div>
  <div class="span-10 last">
@@ -54,13 +59,18 @@
 
  <div class="prepend-1 span-1">bzip2</div>
  <div class="span-2">
-  <a href="/aurlite/aurlite.db.bz2">aurlite.db.bz2</a>
+  <a href="/aurpc/aurlite.db.bz2">aurlite.db.bz2</a>
  </div>
- <div class="span-12 last">[<%= download_sizes['bz2'] %> MB]</div>
+ <div class="span-2">[<%= download_sizes['bz2'] %> MB]</div>
+ <div class="span-10 last">
+  <a href="https://github.com/juster/aurpc">
+   https://github.com/juster/aurpc
+  </a>
+ </div>
 
  <div class="prepend-1 span-1">gzip</div>
  <div class="span-2">
-  <a href="/aurlite/aurlite.db.gz">aurlite.db.gz</a>
+  <a href="/aurpc/aurlite.db.gz">aurlite.db.gz</a>
  </div>
  <div class="span-2">[<%= download_sizes['gz'] %> MB]</div>
 
@@ -84,7 +94,8 @@
  </p>
 
  <h2>
-  GET <span class="uri">/packages? <span class="uriparam">after=""</span> &amp; <span class="uriparam">count=100</span></span>
+  GET <span class="uri">/packages ?
+    <span class="uriparam">after=""</span> </span>
  </h2>
 
  <div class="span-14 box last">
@@ -98,10 +109,6 @@
      last name in the list as this parameter.
      (<b>default:</b> ""; the empty string)
    </div>
-   <div>
-     <i>"count"</i> is the number of packages to fetch information on.
-     (<b>default:</b> 100 <b>min:</b> 1 <b>max:</b> 500)
-   </div>
  </div>
 
  <div class="span-14 box">
@@ -113,21 +120,21 @@
 
  <div class="span-14 box">
    <div><h3>Examples</h3></div>
-   <div><h3><a href="/aurlite/packages">/packages</a></h3></div>
-   <div><h3><a href="/aurlite/packages?after=perl&count=20">
-    /packages?after=perl&amp;count=20
+   <div><h3><a href="/aurpc/packages">/aurpc/packages</a></h3></div>
+   <div><h3><a href="/aurpc/packages?after=ruby">
+    /aurpc/packages?after=ruby
    </a></h3></div>
  </div>
 
  <h2>
-  GET <span class="uri"> /packages/<span class="uriparam">$name</span>?
+  GET <span class="uri"> /packages/<span class="uriparam">name</span> ?
   <span class="uriparam">after=""</span> </span>
  </h2>
  <div class="span-14 box">
    <div class="span-14 last"><h3>Input</h3></div>
    
    <p>
-    <i>$name</i> can be a package name or a glob. Globs are like shell
+    <i>name</i> can be a package name or a glob. Globs are like shell
     globs in that they can contain asterisks (aka stars,
     "*"). Asterisks match one or more characters, greedily.
    </p>
@@ -143,24 +150,36 @@
 
  <div class="span-14 box">
    <div><h3>Examples</h3></div>
-   <div><h3><a href="/aurlite/packages/yaourt">/packages/yaourt</a></h3></div>
-   <div><h3><a href="/aurlite/packages/clyde-git">
-    /packages/clyde-git
+   <div><h3><a href="/aurpc/packages/yaourt">/aurpc/packages/yaourt</a></h3></div>
+   <div><h3><a href="/aurpc/packages/clyde-git">
+    /aurpc/packages/clyde-git
    </a></h3></div>
-   <div><h3><a href="/aurlite/packages/perl-*">
-    /packages/perl-*
+   <div><h3><a href="/aurpc/packages/ruby-*">
+    /aurpc/packages/ruby-*
    </a></h3></div>
-   <div><h3><a href="/aurlite/packages/*-git">
-    /packages/*-git
+   <div><h3><a href="/aurpc/packages/*-git">
+    /aurpc/packages/*-git
    </a></h3></div>
-   <div><h3><a href="/aurlite/packages/*-git?after=gof-git">
-    /packages/*-git?after=gof-git
+   <div><h3><a href="/aurpc/packages/*-git?after=gof-git">
+    /aurpc/packages/*-git?after=gof-git
    </a></h3></div>
-   <div><h3><a href="/aurlite/packages/perl-*-git">
-    /packages/perl-*-git
+   <div><h3><a href="/aurpc/packages/perl-*-git">
+    /aurpc/packages/perl-*-git
    </a></h3></div>
 
  </div>
+
+ <h2>
+  GET <span class="uri"> /authors ?
+  <span class="uriparam">after=""</span> </span>
+ </h2>
+ <p>TODO</p>
+
+ <h2>
+  GET <span class="uri"> /authors/<span class="uriparam">name</span>
+ </h2>
+ <p>TODO</p>
+
 
  <h2>Result Data</h2>
  <p>
