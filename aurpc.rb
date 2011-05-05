@@ -3,7 +3,7 @@ require 'erb'
 require 'json/ext'
 
 APPDIR  = File.dirname( __FILE__ )
-BASEURL = 'http://juster.us:5000'
+BASEURL = 'http://juster.us/aurpc'
 
 $:.push( APPDIR + '/lib' )
 require 'aurlite'
