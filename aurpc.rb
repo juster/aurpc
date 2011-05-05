@@ -1,0 +1,107 @@
+require 'sinatra'
+require 'erb'
+require 'json/ext'
+
+APPDIR  = File.dirname( __FILE__ )
+BASEURL = 'http://juster.us:5000'
+
+$:.push( APPDIR + '/lib' )
+require 'aurlite'
+
+STATICDIR  = APPDIR + '/../static'
+DB_PATH    = APPDIR + '/../var/aurlite.db'
+
+MIN_SECS  = 60
+HOUR_SECS = MIN_SECS  * 60
+DAY_SECS  = HOUR_SECS * 24
+
+set :public, STATICDIR
+
+$AURDB = AURLite.new( DB_PATH )
+
+def timediff_str ( oldtime )
+  mdiff = Time.now - oldtime
+  diffstr = ""
+
+  if mdiff >= DAY_SECS then
+    mdiff = (mdiff / DAY_SECS).to_i
+    diffstr = "#{mdiff} day"
+  elsif mdiff >= HOUR_SECS then
+    mdiff = (mdiff / HOUR_SECS).to_i
+    diffstr = "#{mdiff} hour"
+  else
+    mdiff = (mdiff / MIN_SECS).to_i
+    diffstr = "#{mdiff} min"
+  end
+
+  diffstr << 's' if mdiff > 1
+  return diffstr
+end
+
+def next_url ( routepath, after )
+  url = BASEURL + routepath
+  if after and not after.empty? then
+    return url + "?after=" + after
+  else
+    return url
+  end
+end
+
+def package_url ( pkgname )
+  BASEURL + "/packages/#{pkgname}"
+end
+
+def author_url ( author )
+  BASEURL + "/author/#{author}"
+end
+
+def prep_pkg_matches ( pkgs )
+  pkgs.each do |pkg|
+    pkg[:author_url] = author_url ( pkg[:author] )
+    pkg[:url]        = package_url( pkg[:name]   )
+  end
+
+  nexturl = next_url( request.path, pkgs[-1][:name] )
+  return { :matches  => pkgs, :next_url => nexturl }
+end
+
+def find_pkg_glob ( glob )
+  after = params[:after] || ""
+  pkgs  = $AURDB.glob_pkg( glob, after )
+  halt 400, "No matches found" unless pkgs.length > 0
+
+  return JSON.generate prep_pkg_matches( pkgs )
+end
+
+get '/' do
+  size_of = {}
+  %W{ xz gz bz2 }.each do |ext|
+    path = STATICDIR + "/aurlite.db." + ext
+    size_of[ext] =
+      begin
+        mbs = File.stat( path ).size.to_f / (1024 ** 2);
+        sprintf '%0.2f', mbs
+      rescue Errno::ENOENT then "-999" end
+  end
+
+  erb :index, :locals => {
+    :download_sizes => size_of,
+    :freshness      => timediff_str( File.stat( DB_PATH ).mtime )
+  }
+end
+
+get '/packages/:name' do |name|
+  return find_pkg_glob( name ) if name =~ /[*]/
+
+  pkginfo = $AURDB.lookup_pkg( name )
+  halt 400, "#{name} was not found" unless pkginfo
+
+  pkginfo[:author_url] = author_url( pkginfo[:author] )
+  JSON.generate pkginfo
+end
+
+get '/packages' do
+  after = params[:after] || ""
+  pkgs  = $AURDB.iter_pkgs( after )
+  JSON.generate prep_pkg_matches( pkgs )
+end

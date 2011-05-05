@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+ <head>
+  <title>AURLite and AURPC</title>
+
+  <link rel="stylesheet" href="/css/blueprint/screen.css" type="text/css" media="screen, projection">
+  <link rel="stylesheet" href="/css/blueprint/print.css" type="text/css" media="print">  
+  <!--[if lt IE 8]><link rel="stylesheet" href="/aurlite/css/blueprint/ie.css" type="text/css" media="screen, projection"><![endif]-->
+  <link rel="stylesheet" href="/css/aurpc.css" type="text/css" />
+ </head>
+ <body>
+
+<div class="container">
+<div class="prepend-top prepend-4 span-16 append-4 last">
+
+ <h1>AURLite</h1>
+ <p>
+  AURLite is a copy of the package database from
+  the <a href="http://aur.archlinux.org">Archlinux User
+  Repository</a>.  The AUR is scraped with a script in about an hour
+  and stored in an SQLite database. The database file ends up being
+  about 8 megs, 2 megs when compressed with <i>xz</i>. Look at the
+  aurlite.sql file in the bitbucket repo if you want to play with
+  the database.
+ </p>
+ <p>
+  Every field is extracted from the PKGBUILD except for
+  sources. Extracting the source array was alot of work for PKGBUILDs
+  that use alot of bash logic. I was not convinced it was worth the
+  effort to get accurate sources. This is mostly because of the
+  challenge of split packages and those with different source arrays
+  for different architectures.
+ </p>
+ <p>
+  Split PKGBUILDs are not recognized as providing multiple binary
+  packages. Comments and votes are not copied from the AUR
+  because I feel guilty about using up the AUR's bandwidth. I am more
+  interested in generating statistics, package dependencies and
+  testing out a neat RPC.
+ </p>
+
+ <div class="prepend-1 span-1">xz</div>
+ <div class="span-2">
+  <a href="/aurlite/aurlite.db.xz">aurlite.db.xz</a>
+ </div>
+ <div class="span-2">[<%= download_sizes['xz'] %> MB]</div>
+ <div class="span-10 last">
+  <a href="https://bitbucket.org/juster/aurlite">
+   https://bitbucket.org/juster/aurlite
+  </a>
+ </div>
+
+ <div class="prepend-1 span-1">bzip2</div>
+ <div class="span-2">
+  <a href="/aurlite/aurlite.db.bz2">aurlite.db.bz2</a>
+ </div>
+ <div class="span-12 last">[<%= download_sizes['bz2'] %> MB]</div>
+
+ <div class="prepend-1 span-1">gzip</div>
+ <div class="span-2">
+  <a href="/aurlite/aurlite.db.gz">aurlite.db.gz</a>
+ </div>
+ <div class="span-2">[<%= download_sizes['gz'] %> MB]</div>
+
+ <div class="span-10 last append-bottom">
+  Last scrape was about <%= freshness %> ago.
+ </div>
+
+ <h1>AURPC</h1>
+
+ <p>
+  I call the web services shown below the AURPC. Just because I
+  think it's neat. AURPC is a fun way for me to try out creating a
+  RESTful web service for the AUR data. The <a
+  href="http://aur.archlinux.org/rpc.php">RPC</a> on the AUR is decent
+  but I wondered how nice it could be if made from scratch.
+ </p>
+
+ <p>
+   The following are URIs for services provided by this webapp. The
+   last section describes data returned by services.
+ </p>
+
+ <h2>
+  GET <span class="uri">/packages? <span class="uriparam">after=""</span> &amp; <span class="uriparam">count=100</span></span>
+ </h2>
+
+ <div class="span-14 box last">
+   <div class="span-14 last"><h3>Input</h3></div>
+   <div class="append-bottom">
+     Arguments are given as query parameters:
+   </div>
+   <div>
+     <i>"after"</i> tells AURPC to return only package names greater than
+     the value given. In order to iterate through the packages, send the
+     last name in the list as this parameter.
+     (<b>default:</b> ""; the empty string)
+   </div>
+   <div>
+     <i>"count"</i> is the number of packages to fetch information on.
+     (<b>default:</b> 100 <b>min:</b> 1 <b>max:</b> 500)
+   </div>
+ </div>
+
+ <div class="span-14 box">
+   <div class="span-14 last"><h3>Output</h3></div>
+   <div>
+    An array of package dictionaries.
+   </div>
+ </div>
+
+ <div class="span-14 box">
+   <div><h3>Examples</h3></div>
+   <div><h3><a href="/aurlite/packages">/packages</a></h3></div>
+   <div><h3><a href="/aurlite/packages?after=perl&count=20">
+    /packages?after=perl&amp;count=20
+   </a></h3></div>
+ </div>
+
+ <h2>
+  GET <span class="uri"> /packages/<span class="uriparam">$name</span>?
+  <span class="uriparam">after=""</span> </span>
+ </h2>
+ <div class="span-14 box">
+   <div class="span-14 last"><h3>Input</h3></div>
+   
+   <p>
+    <i>$name</i> can be a package name or a glob. Globs are like shell
+    globs in that they can contain asterisks (aka stars,
+    "*"). Asterisks match one or more characters, greedily.
+   </p>
+
+   <p>
+    Glob search results will only return 500 packages in a bunch. To
+    keep searching, use the <i>after</i> query parameter. The value you
+    give to <i>after</i> should be a package name. Hey guess what?
+    All the names of the packages you get as a result will come after
+    the value of <i>after</i> alphabetically.
+   </p>
+ </div>
+
+ <div class="span-14 box">
+   <div><h3>Examples</h3></div>
+   <div><h3><a href="/aurlite/packages/yaourt">/packages/yaourt</a></h3></div>
+   <div><h3><a href="/aurlite/packages/clyde-git">
+    /packages/clyde-git
+   </a></h3></div>
+   <div><h3><a href="/aurlite/packages/perl-*">
+    /packages/perl-*
+   </a></h3></div>
+   <div><h3><a href="/aurlite/packages/*-git">
+    /packages/*-git
+   </a></h3></div>
+   <div><h3><a href="/aurlite/packages/*-git?after=gof-git">
+    /packages/*-git?after=gof-git
+   </a></h3></div>
+   <div><h3><a href="/aurlite/packages/perl-*-git">
+    /packages/perl-*-git
+   </a></h3></div>
+
+ </div>
+
+ <h2>Result Data</h2>
+ <p>
+   Currently data is only returned as JSON. Later on I would like to
+   be able to return data in some text/plain form that is easily
+   parsed by awk. Dropping in an XML serializer looks pretty easy too.
+ </p>
+
+ <a name="specificpkg"></a>
+ <h3>Specific Package Data</h3>
+ <p>
+  TODO
+ </p>
+ <a name="searchpkgs"></a>
+ <h3>Search Result Package Data</h3>
+ <p>
+  TODO
+ </p>
+
+</div>
+</div>
+
+</body>
+</html>
