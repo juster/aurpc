@@ -3,7 +3,6 @@ require 'erb'
 require 'json/ext'
 
 APPDIR  = File.dirname( __FILE__ )
-BASEURL = 'http://juster.us/aurpc'
 
 $:.push( APPDIR + '/lib' )
 require 'aurlite'
@@ -39,8 +38,8 @@ def timediff_str ( oldtime )
   return diffstr
 end
 
-def next_url ( routepath, after )
-  url = BASEURL + routepath
+def next_url ( after )
+  url = 'http://' + request.host + request.path
   if after and not after.empty? then
     return url + "?after=" + after
   else
@@ -49,11 +48,11 @@ def next_url ( routepath, after )
 end
 
 def package_url ( pkgname )
-  BASEURL + "/packages/#{pkgname}"
+  'http://' + request.host + "/packages/#{pkgname}"
 end
 
 def author_url ( author )
-  BASEURL + "/authors/#{author}"
+  'http://' + request.host + "/authors/#{author}"
 end
 
 def pkg_matches ( pkgs )
@@ -65,7 +64,7 @@ def pkg_matches ( pkgs )
   matchdata = { :matches => pkgs }
   matchdata[:next_url] =
     if pkgs.length == RESULTS_LIMIT then
-      next_url( request.path, pkgs[-1][:name] )
+      next_url( pkgs.last[:name] )
     else
       nil
     end
@@ -79,7 +78,7 @@ def author_matches ( anames )
 
   matchdata = { :matches => amatches }
   matchdata[:next_url] = if amatches.length == RESULTS_LIMIT then
-                           next_url( request.path, anames[-1] )
+                           next_url( anames.last )
                          else nil end
   return matchdata
 end
