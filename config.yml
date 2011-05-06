@@ -1,0 +1,11 @@
+---
+    servers: 1
+    environment: deployment
+    chdir: /srv/http/aurpc/app
+    port: 8001
+    user: aurpc
+    group: http
+    pid: ../var/run/aurpc.pid
+    log: ../var/log/aurpc.log
+    rackup: config.ru
+    daemonize: false
