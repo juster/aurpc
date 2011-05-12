@@ -47,12 +47,16 @@ def next_url ( after )
   end
 end
 
+def aurpc_url ()
+  'http://' + request.host + '/aurpc'
+end
+
 def package_url ( pkgname )
-  'http://' + request.host + "/packages/#{pkgname}"
+  aurpc_url + "/packages/#{pkgname}"
 end
 
 def author_url ( author )
-  'http://' + request.host + "/authors/#{author}"
+  aurpc_url + "/authors/#{author}"
 end
 
 def pkg_matches ( pkgs )
