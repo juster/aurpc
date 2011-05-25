@@ -4,7 +4,7 @@ require 'json/ext'
 
 APPDIR  = File.dirname( __FILE__ )
 
-$:.push( APPDIR + '/lib' )
+$: << (APPDIR + '/lib')
 require 'aurlite'
 
 STATICDIR  = APPDIR + '/../static'
@@ -81,9 +81,8 @@ def author_matches ( anames )
   end
 
   matchdata = { :matches => amatches }
-  matchdata[:next_url] = if amatches.length == RESULTS_LIMIT then
-                           next_url( anames.last )
-                         else nil end
+  matchdata[:next_url] = if amatches.length != RESULTS_LIMIT then nil
+                         else next_url( anames.last ) end
   return matchdata
 end
 
