@@ -83,6 +83,42 @@ LIMIT 500
 
 ENDSQL
 
+SQL_MATCHDEPS = <<'ENDSQL'
+
+SELECT d.pkg_id, n.txt, d.version
+FROM   pkg_name AS n
+JOIN   pkg_dep AS d ON (d.name_id = n.name_id)
+WHERE  n.txt LIKE ?
+
+ENDSQL
+
+SQL_MATCHMDEPS = <<'ENDSQL'
+
+SELECT d.pkg_id, n.txt, d.version
+FROM   pkg_name AS n
+JOIN   pkg_makedep AS d ON (d.name_id = n.name_id)
+WHERE  n.txt LIKE ?
+
+ENDSQL
+
+SQL_MATCHOPTDEPS = <<'ENDSQL'
+
+SELECT d.pkg_id, n.txt, d.detail
+FROM   pkg_name AS n
+JOIN   pkg_optdep AS d ON (d.name_id = n.name_id)
+WHERE  n.txt LIKE ?
+
+ENDSQL
+
+SQL_PKGNAME = <<'ENDSQL'
+
+SELECT n.txt
+FROM   pkg_name AS n
+JOIN   pkg AS p ON (p.name_id = n.name_id)
+WHERE  p.pkg_id = ?
+
+ENDSQL
+
 class AURLite
   def initialize ( dbpath )
     @db = SQLite3::Database.new( dbpath )
@@ -97,6 +133,11 @@ class AURLite
     @authoriter  = @db.prepare( SQL_AUTHORITER )
 
     @globpkg = @db.prepare( SQL_GLOBPKG )
+
+    @matchdeps     = @db.prepare(SQL_MATCHDEPS)
+    @matchmdeps = @db.prepare(SQL_MATCHMDEPS)
+    @matchoptdeps  = @db.prepare(SQL_MATCHOPTDEPS)
+    @pkgname       = @db.prepare(SQL_PKGNAME)
   end
 
   def lookup_pkg ( pkgname )
@@ -147,5 +188,46 @@ class AURLite
 
   def authors_iter ( after )
     @authoriter.execute( after ).collect { |arow| arow[0] }
+  end
+
+  def _pkgname (pkgid)
+    namerow = @pkgname.execute(pkgid).next()
+    if namerow.nil? then return nil else return namerow[0] end
+  end
+
+  def dependants (depq)
+    depq.gsub!(/[*]/, '%')
+    deps = 
+    mdeps = 
+    optdeps = 
+
+    rdeps = {}
+
+    matches = {
+      "depends" => @matchdeps.execute(depq),
+      "makedepends" => @matchmdeps.execute(depq)
+    }
+    matches.each do |type, found|
+      found.each do |row|
+        deperid, depname, depver = *row
+        deper = _pkgname(deperid) or next
+
+        rdeps[deper] ||= {}
+        rdeps[deper][depname] ||= []
+        rdeps[deper][depname] << type << (depver || "")
+        # reverse deps are organized by name of dependency
+      end
+    end
+
+    @matchoptdeps.execute(depq).each do |row|
+      deperid, depname, depmsg = *row
+      deper = _pkgname(deperid)
+      stats = [ "optdepends", depmsg ]
+      rdeps[deper] ||= {}
+      rdeps[deper][depname] ||= []
+      rdeps[deper][depname]  << "optdepends" << depmsg
+    end
+
+    return rdeps
   end
 end

@@ -140,3 +140,9 @@ get '/authors' do
   halt 404, 'No matches found' if authors.empty?
   JSON.generate author_matches( authors )
 end
+
+get '/packages/:match/dependants' do |name|
+  dependants = $AURDB.dependants(name)
+  halt 404, 'No matches found' if dependants.empty?
+  JSON.generate dependants
+end
