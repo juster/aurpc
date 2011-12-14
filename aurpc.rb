@@ -38,12 +38,19 @@ def timediff_str ( oldtime )
   return diffstr
 end
 
-def next_url ( after )
+def next_url (after, extrap)
   url = 'http://' + request.host + request.path
-  if after and not after.empty? then
-    return url + "?after=" + after
+  if extrap
+    qparams = extrap.collect{|k,v| "#{k}=#{v}"} 
   else
+    qparams = []
+  end
+  qparams << "after=#{after}" if after
+
+  if qparams.empty?
     return url
+  else
+    return url + '?' + qparams.join(';')
   end
 end
 
@@ -59,16 +66,16 @@ def author_url ( author )
   aurpc_url + "/authors/#{author}"
 end
 
-def pkg_matches ( pkgs )
+def pkg_matches (pkgs, extrap=nil)
   pkgs.each do |pkg|
-    pkg[:author_url] = author_url ( pkg[:author] )
-    pkg[:url]        = package_url( pkg[:name]   )
+    pkg[:alink] = author_url(pkg[:author])
+    pkg[:pkglink] = package_url(pkg[:name])
   end
 
   matchdata = { :matches => pkgs }
-  matchdata[:next_url] =
+  matchdata[:nextlink] =
     if pkgs.length == RESULTS_LIMIT then
-      next_url( pkgs.last[:name] )
+      next_url(pkgs.last[:name], extrap)
     else
       nil
     end
@@ -81,7 +88,7 @@ def author_matches ( anames )
   end
 
   matchdata = { :matches => amatches }
-  matchdata[:next_url] = if amatches.length != RESULTS_LIMIT then nil
+  matchdata[:nextlink] = if amatches.length != RESULTS_LIMIT then nil
                          else next_url( anames.last ) end
   return matchdata
 end
@@ -91,7 +98,7 @@ def find_pkg_glob ( glob )
   pkgs  = $AURDB.glob_pkg( glob, after )
   halt 404, "No matches found" unless pkgs.length > 0
 
-  return JSON.generate pkg_matches( pkgs )
+  return JSON.generate pkg_matches(pkgs)
 end
 
 get '/' do
@@ -117,14 +124,23 @@ get '/packages/:name' do |name|
   pkginfo = $AURDB.lookup_pkg( name )
   halt 404, "#{name} was not found" unless pkginfo
 
-  pkginfo[:author_url] = author_url( pkginfo[:author] )
+  pkginfo[:alink] = author_url( pkginfo[:author] )
   JSON.generate pkginfo
 end
 
+SRCHKEYS = [ :desc, :url ]
 get '/packages' do
   after = params[:after] || ""
-  pkgs  = $AURDB.iter_pkgs( after )
-  JSON.generate pkg_matches( pkgs )
+  q = {}
+  for k in SRCHKEYS do
+    q[k] = params[k] if params[k]
+  end
+  pkgs = if q.empty?
+           $AURDB.iter_pkgs(after)
+         else
+           $AURDB.search_pkgs(after, q)
+         end
+  JSON.generate pkg_matches(pkgs, q)
 end
 
 get '/authors/:name' do |name|

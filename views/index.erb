@@ -114,7 +114,10 @@
  <div class="span-14 box">
    <div class="span-14 last"><h3>Output</h3></div>
    <div>
-    An array of package dictionaries.
+     A mapping with the keys "matches", which is an array of
+     mappings containing package data, and "nextlink" which is
+     the url used to fetch the next result set, or null if
+     this is not applicable.
    </div>
  </div>
 
@@ -167,6 +170,49 @@
     /aurpc/packages/perl-*-git
    </a></h3></div>
 
+ </div>
+
+ <h2>
+  GET
+  <span class="uri">
+    /packages/<span class="uriparam">name</span>/dependants
+  </span>
+ </h2>
+ <div class="span-14 box">
+   <div class="span-14 last"><h3>Input</h3></div>
+   
+   <p>
+    <i>name</i> can be a package name or a glob. Globs are like shell
+    globs in that they can contain asterisks (aka stars,
+    "*"). Asterisks match one or more characters, greedily.
+   </p>
+ </div>
+
+ <div class="span-14 box">
+   <div class="span-14 last"><h3>Output</h3></div>
+   <p>
+     Reverse dependencies are found for every package matching the
+     <i>name</i> parameter. Because they are reverse dependencies,
+     the data returned resembles how you would typically view
+     dependencies, turned inside out. The type of the dependency
+     is the deepest data structure, which you are trying to get to.
+   </p>
+   <p>
+     The outermost structure is an object (hash), mapping dependant
+     package names to an object (hash). This object value is a mapping
+     of dependency names to dep types. The dep types are arrays of one
+     or two elements. The name of the dep type ("depends",
+     "makedepends", or "optdepends") is the first element. The second
+     element is the version comparison for "depends" and
+     "makedepends". This may not exist if it was not specified in the
+     PKGBUILD. For "optdepends", this second element is instead the
+     optdepends message.
+   </p>
+ </div>
+
+ <div class="span-14 box">
+   <div><h3>Examples</h3></div>
+   <div><h3><a href="/aurpc/packages/perl-*/dependants">/aurpc/packages/perl-*/dependants</a></h3></div>
  </div>
 
  <h2>

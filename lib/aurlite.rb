@@ -1,10 +1,13 @@
 require 'sqlite3'
 
+ROWLIMIT = 500
+
 SQL_PKGINFO = <<'ENDSQL'
 
 SELECT p.pkg_id, a.txt, n.txt,
        p.version,
-       p.description
+       p.description,
+       p.url
 FROM   pkg_name AS n
 JOIN   pkg      AS p ON (p.name_id   = n.name_id)
 JOIN   author   AS a ON (p.author_id = a.author_id)
@@ -32,27 +35,27 @@ WHERE  md.pkg_id = ?
 
 ENDSQL
 
-SQL_GLOBPKG = <<'ENDSQL'
+SQL_GLOBPKG = <<"ENDSQL"
 
-SELECT n.txt, a.txt, p.version, p.description
+SELECT n.txt, a.txt, p.version, p.description, p.url
 FROM   pkg_name AS n
 JOIN   pkg      AS p ON (p.name_id   = n.name_id)
 JOIN   author   AS a ON (p.author_id = a.author_id)
 WHERE  n.txt > ? AND n.txt GLOB ? 
 
-LIMIT 500
+LIMIT #{ROWLIMIT}
 
 ENDSQL
 
-SQL_PKGITER = <<'ENDSQL'
+SQL_PKGITER = <<"ENDSQL"
 
-SELECT n.txt, a.txt, p.version, p.description
+SELECT n.txt, a.txt, p.version, p.description, p.url
 FROM   pkg_name AS n
 JOIN   pkg      AS p ON (p.name_id   = n.name_id)
 JOIN   author   AS a ON (p.author_id = a.author_id)
 WHERE  n.txt > ?
 
-LIMIT 500
+LIMIT #{ROWLIMIT}
 
 ENDSQL
 
@@ -73,13 +76,13 @@ WHERE  p.author_id = ?
 
 ENDSQL
 
-SQL_AUTHORITER = <<'ENDSQL'
+SQL_AUTHORITER = <<"ENDSQL"
 
 SELECT a.txt
 FROM   author AS a
 WHERE  a.txt > ?
 
-LIMIT 500
+LIMIT #{ROWLIMIT}
 
 ENDSQL
 
@@ -119,6 +122,15 @@ WHERE  p.pkg_id = ?
 
 ENDSQL
 
+SQL_PKGSEARCH = <<'ENDSQL'
+
+SELECT n.txt, a.txt, p.version, p.description, p.url
+FROM   pkg_name AS n
+JOIN   pkg      AS p ON (p.name_id   = n.name_id)
+JOIN   author   AS a ON (p.author_id = a.author_id)
+WHERE  n.txt > ?
+ENDSQL
+
 class AURLite
   def initialize ( dbpath )
     @db = SQLite3::Database.new( dbpath )
@@ -134,10 +146,37 @@ class AURLite
 
     @globpkg = @db.prepare( SQL_GLOBPKG )
 
-    @matchdeps     = @db.prepare(SQL_MATCHDEPS)
+    @matchdeps = @db.prepare(SQL_MATCHDEPS)
     @matchmdeps = @db.prepare(SQL_MATCHMDEPS)
-    @matchoptdeps  = @db.prepare(SQL_MATCHOPTDEPS)
-    @pkgname       = @db.prepare(SQL_PKGNAME)
+    @matchoptdeps = @db.prepare(SQL_MATCHOPTDEPS)
+    @pkgname = @db.prepare(SQL_PKGNAME)
+
+    @pkgterms = {
+      :desc => "p.description",
+      :url  => "p.url"
+    }
+  end
+
+  def pkgsrchsql (terms)
+    return nil if terms.empty?
+
+    ssql = "" + SQL_PKGSEARCH
+    terms.each do |term|
+      col = @pkgterms[term]
+      return nil if col.nil?
+      ssql << "AND #{col} GLOB ? COLLATE NOCASE\n"
+    end
+
+    return ssql
+  end
+
+  def search_pkgs (after, query)
+    sql = pkgsrchsql(query.keys())
+    return nil if sql.nil?
+    sql << "LIMIT #{ROWLIMIT}"
+
+    kwords = query.values().collect {|kw| "*#{kw}*" }
+    @db.execute(sql, after, kwords).collect {|r| _matchrow_hash(r) }
   end
 
   def lookup_pkg ( pkgname )
@@ -150,6 +189,7 @@ class AURLite
       :name    => row[2],
       :version => row[3],
       :desc    => row[4],
+      :url     => row[5],
     }
 
     tmp = @pkgdeps.execute( pkgid ).collect { |row| row.join "" }
@@ -163,7 +203,8 @@ class AURLite
 
   def _matchrow_hash ( row )
     { :name    => row[0], :author => row[1],
-      :version => row[2], :desc   => row[3] }
+      :version => row[2], :desc   => row[3],
+      :url     => row[4] }
   end
 
   def glob_pkg ( globstr, after )
@@ -212,9 +253,10 @@ class AURLite
         deperid, depname, depver = *row
         deper = _pkgname(deperid) or next
 
+        rdep = [ type ]
+        rdep << depver unless depver.empty?
         rdeps[deper] ||= {}
-        rdeps[deper][depname] ||= []
-        rdeps[deper][depname] << type << (depver || "")
+        rdeps[deper][depname] = rdep
         # reverse deps are organized by name of dependency
       end
     end
@@ -222,10 +264,11 @@ class AURLite
     @matchoptdeps.execute(depq).each do |row|
       deperid, depname, depmsg = *row
       deper = _pkgname(deperid)
-      stats = [ "optdepends", depmsg ]
+
+      rdep = [ "optdepends" ]
+      rdep << depmsg unless depmsg.empty?
       rdeps[deper] ||= {}
-      rdeps[deper][depname] ||= []
-      rdeps[deper][depname]  << "optdepends" << depmsg
+      rdeps[deper][depname] = rdep
     end
 
     return rdeps
