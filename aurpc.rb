@@ -2,7 +2,7 @@ require 'sinatra'
 require 'erb'
 require 'json/ext'
 
-APPDIR  = File.dirname( __FILE__ )
+APPDIR  = File.dirname(__FILE__)
 
 $: << (APPDIR + '/lib')
 require 'aurlite'
@@ -17,9 +17,9 @@ RESULTS_LIMIT = 500
 
 set :public, STATICDIR
 
-$AURDB = AURLite.new( DB_PATH )
+$AURDB = AURLite.new(DB_PATH)
 
-def timediff_str ( oldtime )
+def timediff_str(oldtime)
   mdiff = Time.now - oldtime
   diffstr = ""
 
@@ -58,11 +58,11 @@ def aurpc_url ()
   'http://' + request.host + '/aurpc'
 end
 
-def package_url ( pkgname )
+def package_url(pkgname)
   aurpc_url + "/packages/#{pkgname}"
 end
 
-def author_url ( author )
+def author_url(author)
   aurpc_url + "/authors/#{author}"
 end
 
@@ -82,20 +82,20 @@ def pkg_matches (pkgs, extrap=nil)
   return matchdata
 end
 
-def author_matches ( anames )
+def author_matches(anames)
   amatches = anames.collect do |aname|
-    { :name => aname, :url => author_url( aname ) }
+    { :name => aname, :url => author_url(aname) }
   end
 
   matchdata = { :matches => amatches }
   matchdata[:nextlink] = if amatches.length != RESULTS_LIMIT then nil
-                         else next_url( anames.last ) end
+                         else next_url(anames.last) end
   return matchdata
 end
 
-def find_pkg_glob ( glob )
+def find_pkg_glob(glob)
   after = params[:after] || ""
-  pkgs  = $AURDB.glob_pkg( glob, after )
+  pkgs  = $AURDB.glob_pkg(glob, after)
   halt 404, "No matches found" unless pkgs.length > 0
 
   return JSON.generate pkg_matches(pkgs)
@@ -107,24 +107,24 @@ get '/' do
     path = STATICDIR + "/aurlite.db." + ext
     size_of[ext] =
       begin
-        mbs = File.stat( path ).size.to_f / (1024 ** 2);
+        mbs = File.stat(path).size.to_f / (1024 ** 2);
         sprintf '%0.2f', mbs
       rescue Errno::ENOENT then "-999" end
   end
 
   erb :index, :locals => {
     :download_sizes => size_of,
-    :freshness      => timediff_str( File.stat( DB_PATH ).mtime )
+    :freshness      => timediff_str(File.stat(DB_PATH).mtime)
   }
 end
 
 get '/packages/:name' do |name|
-  return find_pkg_glob( name ) if name =~ /[*]/
+  return find_pkg_glob(name) if name =~ /[*]/
 
-  pkginfo = $AURDB.lookup_pkg( name )
+  pkginfo = $AURDB.lookup_pkg(name)
   halt 404, "#{name} was not found" unless pkginfo
 
-  pkginfo[:alink] = author_url( pkginfo[:author] )
+  pkginfo[:alink] = author_url(pkginfo[:author])
   JSON.generate pkginfo
 end
 
@@ -144,17 +144,17 @@ get '/packages' do
 end
 
 get '/authors/:name' do |name|
-  authorinfo = $AURDB.lookup_author( name )
+  authorinfo = $AURDB.lookup_author(name)
   halt 404, "#{name} was not found" unless authorinfo
 
-  authorinfo[:packages].each { |pkg| pkg[:url] = package_url( pkg[:name] ) }
+  authorinfo[:packages].each { |pkg| pkg[:url] = package_url(pkg[:name]) }
   JSON.generate authorinfo
 end
 
 get '/authors' do
-  authors = $AURDB.authors_iter( params[:after] || %Q{} )
+  authors = $AURDB.authors_iter(params[:after] || %Q{})
   halt 404, 'No matches found' if authors.empty?
-  JSON.generate author_matches( authors )
+  JSON.generate author_matches(authors)
 end
 
 get '/packages/:match/dependants' do |name|
